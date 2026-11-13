@@ -1,0 +1,29 @@
+name: Build prototype
+
+# 只手动触发：在 Actions 页点 "Run workflow"。不在 push 时自动跑，
+# 也不碰仓库设置——Pages 的开关由你在 Settings → Pages 里自己选。
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+        env:
+          # basePath 和 src/music/assets.ts 的 asset() 共用这一个变量。
+          # 项目站点挂在 /EI-music/ 下，所以前缀是 /EI-music。
+          NEXT_PUBLIC_BASE_PATH: /EI-music
+      # _next 目录以下划线开头，Pages 的 Jekyll 会整个忽略掉，所以要这个空文件。
+      - run: touch out/.nojekyll
+      - uses: actions/upload-artifact@v4
+        with:
+          name: prototype-static-site
+          path: out

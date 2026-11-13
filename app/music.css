@@ -1,0 +1,530 @@
+/* Ei Music 原型：唯一样式表，/music/ 与 /music-board/ 都引这一份。
+   层次：token → 机身 → chrome → 基础件 → 各屏 → keyframes → media
+   全部选择器都挂在 .ei-music 下，避免和仓库其它原型的全局样式互相污染。 */
+
+.ei-music{
+  --ei-bg:#1C1C1E;--ei-card:#000;--ei-card-2:#121214;--ei-line:#363636;
+  /* 文字三档与主紫取自 Figma 导出的 SVG（1-创意空间-我的项目），不再是从 PNG 采的近似值。 */
+  --ei-ink:#EDEEFF;--ei-ink-2:#D9D9D9;--ei-ink-3:#838383;--ei-ink-4:#6B6B6C;
+  --ei-purple:#922AFF;--ei-lav:#D8B1FF;--ei-lav-soft:#F3E6FF;--ei-deep:#723CAB;--ei-yellow:#FFD200;
+  --ei-cream:#FCF1DB;--ei-coral:#FF7A67;--ei-amber:#FFAA1A;--ei-teal:#12313E;
+  --ei-sky:#72CCFF;--ei-violet:#9747FF;--ei-indigo:#7876FF;--ei-orange:#FFA451;
+  /* 几何按 SVG 实测：卡片 rx=10、缩略图 rx=5、状态栏 0–49、顶栏 49–93（高 44）。 */
+  --ei-r:10px;--ei-r-sm:5px;--ei-gut:16px;
+  --ei-status:49px;--ei-nav:48px;--ei-tabbar:78px;
+  font-family:'PingFang SC','Noto Sans SC','Hiragino Sans GB',-apple-system,BlinkMacSystemFont,'Helvetica Neue',sans-serif;
+  color:var(--ei-ink);
+  -webkit-font-smoothing:antialiased;
+}
+.ei-music *{box-sizing:border-box;margin:0}
+/* 重置必须比组件类弱：`.ei-music button` 是 (0,1,1)，会压过 `.ei-btn`/`.ei-chip`/`.ei-row`
+   的 (0,1,0)，于是所有按钮的 padding 和底色都被这一行清掉，看起来就是「文字大按钮小」。
+   包一层 :where() 把它降到纯元素选择器 (0,0,1)，任何类都能覆盖。 */
+:where(.ei-music) button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+:where(.ei-music) input{font:inherit;color:inherit;border:0;background:none}
+:where(.ei-music) ul,:where(.ei-music) ol{list-style:none;padding:0}
+.ei-music img{display:block;max-width:100%}
+.ei-music button:focus-visible,.ei-music [tabindex]:focus-visible,.ei-music input:focus-visible{outline:2px solid var(--ei-lav);outline-offset:2px}
+
+/* ---------------------------------------------------------------- 机身
+   不复用全局 .iphone-frame：它的 transform:scale() 按视口算，设计板上
+   20 个并排会各自撑满视口。.ei-frame 自己不缩放，缩放交给外层决定。 */
+.ei-frame{
+  position:relative;width:393px;height:852px;flex:none;overflow:hidden;
+  border:7px solid #121316;border-radius:52px;background:var(--ei-bg);
+  box-shadow:0 22px 65px rgb(10 6 20/42%),inset 0 0 0 1px #4c4e54;
+}
+.ei-stage{display:grid;place-items:start center;width:100vw;height:100dvh;overflow:hidden;padding:6px 12px 12px;background:#0d0d10}
+.ei-stage .ei-frame{transform-origin:top center;transform:scale(min(1,calc((100vw - 24px)/393px),calc((100dvh - 18px)/852px)))}
+.ei-screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--ei-bg);overflow:hidden}
+.ei-island{position:absolute;z-index:110;top:11px;left:50%;width:112px;height:31px;transform:translateX(-50%);border-radius:19px;background:#050506}
+.ei-home{position:absolute;z-index:110;bottom:7px;left:50%;width:134px;height:4px;transform:translateX(-50%);border-radius:2px;background:#5c5c60}
+
+/* ---------------------------------------------------------------- 状态栏 */
+.ei-statusbar{display:flex;align-items:flex-end;justify-content:space-between;flex:none;height:var(--ei-status);padding:0 26px 4px;font-size:15px;font-weight:600;letter-spacing:.02em}
+.ei-statusbar>span:last-child{display:flex;align-items:center;gap:5px}
+.ei-sig{display:flex;align-items:flex-end;gap:2px;height:11px}
+.ei-sig i{width:3px;border-radius:1px;background:currentColor}
+.ei-sig i:nth-child(1){height:4px}
+.ei-sig i:nth-child(2){height:6px}
+.ei-sig i:nth-child(3){height:9px}
+.ei-sig i:nth-child(4){height:11px}
+.ei-batt{position:relative;width:25px;height:12px;border:1px solid currentColor;border-radius:3.5px;opacity:.9}
+.ei-batt::after{content:'';position:absolute;inset:2px;right:7px;border-radius:1.5px;background:currentColor}
+.ei-batt::before{content:'';position:absolute;top:4px;right:-3px;width:2px;height:4px;border-radius:0 1px 1px 0;background:currentColor}
+
+/* ------------------------------------------------------------ 顶栏 chrome */
+/* 顶栏只有 393px 宽，还要同时放 ☰、三条子 tab 和 🔍。原来子 tab 是 21px/700，
+   三个四字标签加间距超过可用宽度，于是压到了两边的图标上。降到 17px 并让这一排
+   在极端情况下横向滚动，图标永远不会被盖住。 */
+.ei-nav{display:flex;align-items:center;gap:4px;flex:none;height:var(--ei-nav);padding:0 14px}
+.ei-nav-subs{display:flex;flex:1;justify-content:center;gap:18px;min-width:0;overflow:auto hidden;scrollbar-width:none}
+.ei-nav-subs::-webkit-scrollbar{width:0;height:0}
+.ei-sub{position:relative;flex:none;padding:2px 1px 8px;font-size:17px;font-weight:700;color:var(--ei-ink-2);white-space:nowrap;transition:color .18s}
+.ei-sub[aria-selected='true']{color:var(--ei-ink)}
+/* 下划线在 SVG 里是 62×3 直角、紧贴标签宽度（不是固定 26px），所以用 left/right 撑开。 */
+.ei-sub[aria-selected='true']::after{content:'';position:absolute;bottom:2px;left:0;right:0;height:3px;background:var(--ei-purple)}
+.ei-nav-solo{flex:1;min-width:0;text-align:center;font-size:17px;font-weight:700;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-icon-btn{display:grid;place-items:center;flex:none;width:34px;height:34px;border-radius:50%;color:var(--ei-ink)}
+.ei-icon-btn:active{background:#ffffff14}
+/* 图标是 Figma 导出的单色剪影位图，alpha 当形状、currentColor 当颜色。 */
+.ei-ico{display:block;flex:none;background:currentColor;
+  -webkit-mask-size:contain;-webkit-mask-position:center;-webkit-mask-repeat:no-repeat;
+  mask-size:contain;mask-position:center;mask-repeat:no-repeat}
+
+.ei-back{display:flex;align-items:center;gap:10px;flex:none;height:var(--ei-nav);padding:0 14px}
+.ei-back h1{flex:1;font-size:17px;font-weight:600;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-chev{display:block;width:10px;height:10px;border-left:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(45deg);margin-left:4px}
+
+/* ---------------------------------------------------------------- 底栏 */
+/* 顶栏和正文之间留一口气：子 tab 的下划线紧贴内容第一行时很挤。 */
+.ei-body{flex:1;min-height:0;overflow:hidden auto;padding:12px var(--ei-gut) 18px;-webkit-overflow-scrolling:touch}
+.ei-body.ei-flush{padding-left:0;padding-right:0}
+.ei-body::-webkit-scrollbar{width:0}
+
+/* 原稿里底 tab 是一块悬浮圆角卡，离左右和 home 条都有空隙，不是贴边的横条。 */
+.ei-tabbar{display:flex;flex:none;align-items:center;height:58px;margin:0 14px 20px;padding:0 4px;border-radius:20px;background:#101012;box-shadow:0 10px 30px #00000066}
+.ei-tabbar button{display:grid;flex:1;justify-items:center;gap:4px;padding:2px 0;font-size:10px;color:var(--ei-ink-3)}
+.ei-tabbar button[aria-current='page']{color:var(--ei-purple)}
+
+/* ------------------------------------------------------------ 基础件 */
+.ei-card{border-radius:var(--ei-r);background:var(--ei-card);overflow:hidden}
+.ei-row{display:flex;align-items:center;gap:12px;width:100%;padding:10px;border-radius:var(--ei-r);background:var(--ei-card);text-align:left}
+.ei-row.ei-on{background:var(--ei-lav);color:#1a1020}
+.ei-row-thumb{flex:none;width:84px;height:82px;border-radius:var(--ei-r-sm);object-fit:cover;background:#26262a}
+.ei-row-main{flex:1;min-width:0}
+/* 黑卡上的标题在原稿里是奶油色（#FCF1DB），只有淡紫选中行才翻成深色。 */
+.ei-row-main b{display:block;font-size:15px;font-weight:600;color:var(--ei-cream);overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-row.ei-on .ei-row-main b{color:#1a1020}
+.ei-row-main small{display:block;margin-top:5px;font-size:12px;color:var(--ei-ink-3)}
+.ei-row.ei-on .ei-row-main small{color:#55396e}
+.ei-row-tail{display:flex;flex:none;align-items:center;gap:8px;padding-right:6px;font-size:12px;color:var(--ei-ink-3)}
+/* 可点的东西都给一次按下反馈，不然深色卡上分不清哪块能点。 */
+button.ei-row:active,.ei-row-hit:active,.ei-chat-attach:active,.ei-inst-card:active,.ei-search-fake:active,.ei-feed-hit:active,.ei-group-hit:active{opacity:.74}
+
+.ei-chips{display:flex;gap:8px;overflow:auto hidden;margin:0 calc(-1*var(--ei-gut));padding:2px var(--ei-gut) 10px;scrollbar-width:none}
+.ei-chips::-webkit-scrollbar{width:0;height:0}
+.ei-chip{flex:none;display:inline-flex;align-items:center;min-height:33px;padding:7px 16px;border:1px solid var(--ei-line);border-radius:999px;font-size:13px;line-height:1.2;color:var(--ei-ink-2);white-space:nowrap;transition:background .16s,color .16s,border-color .16s,transform .12s}
+.ei-chip[aria-pressed='true']{border-color:var(--ei-lav);background:var(--ei-lav);color:#2a1540;font-weight:600}
+.ei-chip:active{transform:scale(.96)}
+
+.ei-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;min-height:50px;padding:14px 18px;border-radius:14px;background:var(--ei-lav-soft);color:#2a1540;font-size:15px;font-weight:600;line-height:1.3;transition:transform .12s,opacity .12s}
+.ei-btn.ei-btn-purple{background:var(--ei-purple);color:#fff;box-shadow:0 8px 20px #922aff40}
+.ei-btn.ei-btn-ghost{border:1px solid var(--ei-line);background:#ffffff0a;color:var(--ei-ink)}
+.ei-btn:active{transform:scale(.985);opacity:.92}
+.ei-btn:disabled{opacity:.45;box-shadow:none}
+.ei-btn.ei-btn-sm{width:fit-content;min-height:36px;padding:8px 16px;border-radius:999px;font-size:13px}
+/* 一屏里「选哪条路」的按钮组。.ei-fill 撑满一屏，margin-top:auto 把它推到底部，
+   内容多到要滚的时候又会自然跟在内容后面，不会盖住正文。 */
+.ei-fill{display:flex;flex-direction:column;min-height:100%}
+.ei-actions{display:grid;gap:10px;margin-top:auto;padding-top:18px}
+.ei-actions .ei-btn{flex-direction:column;align-items:stretch;gap:3px;padding:13px 16px;text-align:left}
+.ei-actions .ei-btn b{font-size:15px;font-weight:600}
+.ei-actions .ei-btn small{font-size:12px;line-height:1.5;opacity:.72}
+.ei-section{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:20px 0 11px;font-size:15px;font-weight:600}
+.ei-section span{font-size:12px;font-weight:400;color:var(--ei-ink-3)}
+.ei-hint{font-size:12px;line-height:1.75;color:var(--ei-ink-3)}
+
+/* -------------------------------------------------- 浮层：scrim / sheet / 抽屉 */
+.ei-scrim{position:absolute;inset:0;z-index:60;background:#000000a6;backdrop-filter:blur(14px)}
+.ei-sheet{position:absolute;z-index:61;right:0;bottom:0;left:0;max-height:78%;overflow:auto;padding:10px 18px calc(18px + 14px);border-radius:26px 26px 0 0;background:#232326;box-shadow:0 -18px 50px #000000a0}
+.ei-sheet-grip{width:40px;height:4px;margin:0 auto 14px;border-radius:2px;background:#4b4b50}
+.ei-sheet h2{margin-bottom:4px;font-size:18px;font-weight:600}
+.ei-sheet>.ei-hint{margin-bottom:14px}
+.ei-sheet-list{display:grid;gap:9px}
+.ei-sheet-close{display:flex;align-items:center;justify-content:center;width:100%;min-height:50px;margin-top:12px;padding:14px;border-radius:14px;background:#2f2f33;font-size:15px;font-weight:600;line-height:1.3;color:var(--ei-ink-2)}
+.ei-sheet-close:active{opacity:.8}
+.ei-center{position:absolute;z-index:61;top:50%;left:50%;width:calc(100% - 44px);transform:translate(-50%,-50%);padding:22px 20px;border-radius:24px;background:#232326;box-shadow:0 24px 60px #000000a8}
+.ei-drawer{position:absolute;z-index:61;top:0;bottom:0;left:0;display:flex;flex-direction:column;width:300px;padding:var(--ei-status) 18px 24px;background:#1a1a1d;box-shadow:24px 0 60px #000000a8}
+
+/* ------------------------------------------------------------ toast */
+.ei-toast{position:absolute;z-index:80;bottom:calc(var(--ei-tabbar) + 18px);left:50%;max-width:84%;transform:translateX(-50%);padding:11px 18px;border-radius:999px;background:#f3e6ffee;color:#2a1540;font-size:13px;font-weight:600;text-align:center;box-shadow:0 10px 30px #00000070;animation:ei-toast .22s ease}
+
+/* ------------------------------------------------------- 推子 / 进度 / 波形 */
+.ei-faders{display:flex;gap:10px;padding:16px 10px;border-radius:var(--ei-r);background:var(--ei-card)}
+.ei-fader{display:grid;flex:1;justify-items:center;gap:9px}
+.ei-fader-track{position:relative;width:34px;height:150px;border-radius:17px;background:#232327}
+.ei-fader-fill{position:absolute;right:3px;bottom:3px;left:3px;border-radius:14px;background:linear-gradient(#d8b1ff,#8d55c9)}
+.ei-fader-knob{position:absolute;right:-3px;left:-3px;height:14px;border-radius:8px;background:#f3e6ff;box-shadow:0 2px 8px #0009}
+.ei-fader b{font-size:12px;font-weight:500;color:var(--ei-ink-2)}
+.ei-fader small{font-size:11px;color:var(--ei-ink-3)}
+
+.ei-seek{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--ei-ink-3);font-variant-numeric:tabular-nums}
+.ei-seek-track{position:relative;flex:1;height:4px;border-radius:2px;background:#3a3a3f}
+.ei-seek-fill{position:absolute;top:0;bottom:0;left:0;border-radius:2px;background:var(--ei-lav)}
+.ei-seek-fill::after{content:'';position:absolute;top:50%;right:-5px;width:11px;height:11px;transform:translateY(-50%);border-radius:50%;background:#fff}
+
+.ei-wave{display:flex;align-items:center;gap:2px;height:56px}
+.ei-wave i{flex:1;border-radius:1px;background:#4a4a50}
+.ei-wave i.ei-lit{background:var(--ei-lav)}
+
+.ei-play{display:grid;place-items:center;width:58px;height:58px;border-radius:50%;background:var(--ei-purple);color:#fff;box-shadow:0 8px 24px #922aff4d}
+/* 列表里的小播放键按 SVG 实测是 33px：黑卡上白底黑三角，淡紫选中行上反过来。 */
+.ei-play.ei-sm{width:33px;height:33px;background:#fff;color:#141217;box-shadow:none}
+.ei-row.ei-on .ei-play.ei-sm{background:#141217;color:#fff}
+.ei-play svg{width:22px;height:22px}
+.ei-play.ei-sm svg{width:13px;height:13px}
+
+.ei-masonry{column-count:2;column-gap:9px}
+.ei-masonry>*{margin-bottom:9px;break-inside:avoid}
+
+/* ------------------------------------------------------- 工具 class */
+.ei-mt{margin-top:12px}
+.ei-chips.ei-wrap{flex-wrap:wrap;overflow:visible}
+.ei-sm-thumb{width:64px;height:60px}
+.ei-seg{display:flex;gap:4px;margin:4px 0 14px;padding:3px;border-radius:12px;background:#2f2f33}
+.ei-seg button{flex:1;min-height:36px;padding:9px;border-radius:9px;font-size:13px;line-height:1.2;color:var(--ei-ink-3)}
+.ei-seg button[aria-selected='true']{background:var(--ei-lav-soft);color:#2a1540;font-weight:600}
+.ei-switch{display:flex;align-items:center;gap:10px;padding:13px 12px;border-radius:14px;background:var(--ei-card);font-size:14px}
+.ei-switch span{flex:1}
+.ei-switch input{position:absolute;width:1px;height:1px;opacity:0}
+.ei-switch i{position:relative;flex:none;width:44px;height:26px;border-radius:13px;background:#3d3d44;transition:background .18s}
+.ei-switch i::after{content:'';position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:transform .18s}
+.ei-switch input:checked+i{background:var(--ei-purple)}
+.ei-switch input:checked+i::after{transform:translateX(18px)}
+.ei-switch input:focus-visible+i{outline:2px solid var(--ei-lav);outline-offset:2px}
+.ei-dev-dot{flex:none;width:9px;height:9px;margin-left:4px;border-radius:50%;background:#55555c}
+.ei-dev-dot[data-on]{background:#5ee07f;box-shadow:0 0 10px #5ee07f88}
+.ei-row[data-on]{box-shadow:inset 0 0 0 1.5px var(--ei-lav)}
+
+/* ---------------------------------------------------------- N1 抽屉 */
+.ei-drawer-me{display:flex;align-items:center;gap:12px;width:100%;margin-bottom:16px;text-align:left}
+.ei-drawer-me img{flex:none;width:52px;height:52px;border-radius:50%;object-fit:cover}
+.ei-drawer-me span{flex:1;min-width:0}
+.ei-drawer-me b{display:block;font-size:17px;font-weight:600}
+.ei-drawer-me small{display:block;margin-top:3px;font-size:12px;color:var(--ei-ink-3)}
+.ei-drawer-stats{display:flex;gap:8px;margin-bottom:18px}
+.ei-drawer-stats>div{flex:1;padding:11px 0;border-radius:14px;background:var(--ei-card);text-align:center}
+.ei-drawer-stats b{display:block;font-size:19px;font-weight:600}
+.ei-drawer-stats small{font-size:11px;color:var(--ei-ink-3)}
+.ei-drawer-nav{display:grid;gap:2px;margin-bottom:20px}
+.ei-drawer-nav button{display:flex;align-items:center;min-height:46px;padding:12px 12px;border-radius:12px;font-size:15px;line-height:1.3;text-align:left}
+.ei-drawer-nav button:active{background:#ffffff12}
+.ei-drawer-dev{margin-bottom:16px;padding:14px;border-radius:var(--ei-r);background:var(--ei-card);font-size:13px}
+.ei-drawer-dev>b{display:block;margin-bottom:10px;font-size:13px;color:var(--ei-ink-2)}
+.ei-drawer-dev>div{display:flex;align-items:center;gap:8px;padding:5px 0;color:var(--ei-ink-2)}
+.ei-drawer-dev i{width:8px;height:8px;border-radius:50%;background:#55555c}
+.ei-drawer-dev i[data-on]{background:#5ee07f}
+.ei-drawer-dev span{margin-left:auto;font-size:11px;color:var(--ei-ink-3)}
+.ei-drawer-dev .ei-btn{margin-top:10px;padding:10px;font-size:13px}
+.ei-drawer .ei-hint{margin-top:10px}
+
+/* ------------------------------------------- N3 新建项目 / 传输 / 分享 */
+.ei-modal-title{margin-bottom:5px;font-size:19px;font-weight:600}
+.ei-center .ei-sheet-list{margin-top:14px}
+.ei-xfer{margin-top:14px;font-size:12px;color:var(--ei-ink-2)}
+.ei-xfer-bar{height:6px;margin-bottom:9px;border-radius:3px;background:#2f2f35;overflow:hidden}
+.ei-xfer-bar i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#723cab,#d8b1ff);transition:width .12s linear}
+.ei-share-qr{display:grid;justify-items:center;gap:12px;padding:16px 0 4px}
+.ei-qr{border-radius:10px}
+.ei-share-qr .ei-hint{text-align:center}
+.ei-share-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:14px 0 0}
+.ei-share-grid button{display:grid;justify-items:center;gap:7px;padding:8px 2px;border-radius:14px;font-size:11px;line-height:1.3;color:var(--ei-ink-2)}
+.ei-share-grid button:active{background:#ffffff10}
+.ei-share-grid span{width:46px;height:46px;border-radius:50%;background:#33333a}
+
+/* ------------------------------------------------------ N20 全局搜索 */
+.ei-search{position:absolute;inset:0;z-index:70;overflow:auto;padding:calc(var(--ei-status) + 6px) var(--ei-gut) 24px;background:var(--ei-bg)}
+.ei-search-bar{display:flex;align-items:center;gap:9px;padding:10px 14px;border-radius:999px;background:#2b2b30;color:var(--ei-ink-3)}
+.ei-search-bar input{flex:1;min-width:0;font-size:14px;color:var(--ei-ink)}
+.ei-search-bar input::placeholder{color:var(--ei-ink-3)}
+.ei-search-bar button{flex:none;min-height:34px;padding:0 4px;font-size:13px;color:var(--ei-lav)}
+
+/* ------------------------------------------------------ N2 个人账户 */
+.ei-me{display:grid;justify-items:center;gap:4px;padding:18px 0 6px;text-align:center}
+.ei-me img{width:78px;height:78px;border-radius:50%;object-fit:cover}
+.ei-me b{margin-top:8px;font-size:19px;font-weight:600}
+.ei-me small{font-size:12px;color:var(--ei-ink-3)}
+.ei-me .ei-hint{max-width:270px;margin-top:6px;text-align:center}
+.ei-me-stats{display:flex;gap:8px;margin:16px 0 4px}
+.ei-me-stats button{flex:1;padding:12px 0;border-radius:14px;background:var(--ei-card)}
+.ei-me-stats b{display:block;font-size:19px;font-weight:600}
+.ei-me-stats small{font-size:11px;color:var(--ei-ink-3)}
+.ei-avatar{width:44px;height:44px;border-radius:50%}
+
+/* ------------------------------------------------- N4 线上编辑器 */
+.ei-ed-head{display:flex;align-items:center;gap:12px;padding:12px 0 6px}
+.ei-ed-head div{flex:1;min-width:0}
+.ei-ed-head b{display:block;font-size:17px;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-ed-head small{display:block;margin-top:3px;font-size:12px;color:var(--ei-ink-3)}
+.ei-ed{position:relative;padding:8px 10px 12px;border-radius:var(--ei-r);background:var(--ei-card)}
+.ei-ed-ruler{display:flex;margin-left:58px;padding-bottom:6px;border-bottom:1px solid var(--ei-line)}
+.ei-ed-ruler span{font-size:9px;color:var(--ei-ink-3);font-variant-numeric:tabular-nums}
+.ei-ed-track{display:flex;align-items:center;gap:0;height:40px}
+.ei-ed-name{flex:none;width:58px;padding-right:8px;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-ed-lane{position:relative;flex:1;height:30px;border-radius:6px;background:#17171a}
+.ei-ed-clip{position:absolute;top:0;bottom:0;border-radius:8px;padding:0 6px;font-size:9.5px;color:#1a1020;font-weight:600;text-align:left;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;opacity:.86}
+.ei-ed-clip[data-on]{opacity:1;box-shadow:0 0 0 2px #fff inset}
+.ei-ed-playhead{position:absolute;top:30px;bottom:12px;width:2px;background:var(--ei-yellow);box-shadow:0 0 8px #ffd20099}
+.ei-ed-ops{display:flex;align-items:center;gap:8px;margin-top:12px;padding:10px 12px;border-radius:14px;background:#232326;font-size:12px}
+.ei-ed-ops b{flex:1;min-width:0;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-ed-ops button{display:inline-flex;align-items:center;min-height:30px;padding:7px 13px;border-radius:999px;background:#3a3a40;font-size:12px;line-height:1.2;color:var(--ei-ink-2)}
+.ei-ed-ops button:active{background:#4a4a52}
+
+/* ----------------------------------------- N5 / N12 播放器通用 */
+.ei-player{display:grid;justify-items:center;gap:4px;padding:14px 0 18px;text-align:center}
+.ei-player img{width:240px;height:240px;border-radius:20px;object-fit:cover}
+.ei-player b{margin-top:14px;font-size:19px;font-weight:600}
+.ei-player small{font-size:12px;color:var(--ei-ink-3)}
+.ei-player-ops{display:flex;align-items:center;justify-content:center;gap:22px;padding:16px 0 4px}
+
+/* ------------------------------------------- N9 / N10 AI特效处理 */
+.ei-fx-head{padding:14px 0 4px}
+.ei-fx-head b{display:block;font-size:19px;font-weight:600}
+.ei-fx-head small{display:block;margin-top:4px;font-size:12px;color:var(--ei-ink-3)}
+.ei-ab{display:grid;gap:10px}
+.ei-ab>div{display:grid;grid-template-columns:1fr auto;align-items:center;gap:4px 12px;padding:12px 14px;border-radius:var(--ei-r);background:var(--ei-card)}
+.ei-ab>div[data-on]{box-shadow:inset 0 0 0 1.5px var(--ei-lav)}
+.ei-ab span{grid-column:1/-1;font-size:11px;color:var(--ei-ink-3)}
+.ei-ab .ei-wave{height:42px}
+.ei-ab .ei-play{grid-row:2}
+
+/* ------------------------------------- N11 图片转音乐·合集播放 */
+.ei-shots{position:relative;border-radius:var(--ei-r);overflow:hidden;background:#000}
+.ei-shots img{width:100%;height:300px;object-fit:cover}
+.ei-shots-dots{position:absolute;bottom:10px;left:50%;display:flex;gap:5px;transform:translateX(-50%)}
+.ei-shots-dots i{width:6px;height:6px;border-radius:50%;background:#ffffff59}
+.ei-shots-dots i[data-on]{width:16px;border-radius:3px;background:#fff}
+.ei-shots-meta{padding:14px 0 10px}
+.ei-shots-meta b{display:block;font-size:17px;font-weight:600}
+.ei-shots-meta small{display:block;margin-top:4px;font-size:12px;color:var(--ei-ink-3)}
+
+/* ------------------------------------------ N12 社区作品详情 */
+.ei-post-art{width:100%;border-radius:var(--ei-r);object-fit:cover}
+.ei-post-by{display:flex;align-items:center;gap:10px;margin:12px 0 10px;padding:9px 12px;border-radius:14px;background:var(--ei-cream);color:#2a1540}
+.ei-post-by img{width:40px;height:40px;border-radius:50%;object-fit:cover}
+.ei-post-by span{flex:1;min-width:0}
+.ei-post-by b{display:block;font-size:14px;font-weight:600}
+.ei-post-by small{display:block;margin-top:2px;font-size:11px;color:#6b5a44}
+.ei-post-by .ei-chip{border-color:#2a154033;background:#2a1540;color:#fff;font-size:12px;padding:6px 13px}
+.ei-post-title{margin-bottom:6px;font-size:19px;font-weight:600}
+.ei-post-ops{display:flex;gap:8px;margin:14px 0 10px}
+.ei-post-ops button{display:flex;flex:1;align-items:center;justify-content:center;min-height:42px;padding:11px 6px;border:1px solid var(--ei-line);border-radius:12px;font-size:13px;line-height:1.2;color:var(--ei-ink-2)}
+.ei-post-ops button[aria-pressed='true']{border-color:var(--ei-lav);background:var(--ei-lav-soft);color:#2a1540;font-weight:600}
+.ei-comments{display:grid;gap:12px}
+.ei-comments li{display:flex;gap:10px}
+.ei-comments img{flex:none;width:34px;height:34px;border-radius:50%;object-fit:cover}
+.ei-comments b{display:block;font-size:12px;font-weight:600;color:var(--ei-ink-2)}
+.ei-comments small{display:block;margin-top:3px;font-size:13px;line-height:1.6}
+
+/* ---------------------------------------------- N13 小组详情 */
+.ei-group-by{padding:14px 0 4px}
+.ei-group-by b{display:block;font-size:19px;font-weight:600}
+.ei-group-by small{display:block;margin-top:4px;font-size:12px;color:var(--ei-ink-3)}
+.ei-group-mem{display:flex;margin-top:10px}
+.ei-group-mem img{width:34px;height:34px;margin-right:-9px;border:2px solid var(--ei-bg);border-radius:50%;object-fit:cover}
+
+/* -------------------------------------------- N15 发现乐友 */
+.ei-map-wrap{position:relative;margin-top:4px;border-radius:var(--ei-r);background:#14141a;overflow:hidden}
+.ei-map{display:block;width:100%;height:auto}
+.ei-map-hit{position:absolute;inset:0}
+.ei-map-hit button{position:absolute;width:34px;height:34px;transform:translate(-50%,-70%);border-radius:50%}
+.ei-pin-card{display:flex;align-items:center;gap:11px;margin-top:11px;padding:11px 13px;border-radius:var(--ei-r);background:var(--ei-card)}
+.ei-pin-card img{flex:none;width:54px;height:54px;border-radius:50%;object-fit:cover}
+.ei-pin-card span{flex:1;min-width:0}
+.ei-pin-card b{display:block;font-size:15px;font-weight:600}
+.ei-pin-card small{display:block;margin-top:4px;font-size:12px;color:var(--ei-ink-3)}
+.ei-pin-card .ei-chip{border-color:var(--ei-lav);background:var(--ei-lav-soft);color:#2a1540;font-weight:600}
+
+/* ------------------------------------------------ N16 聊天 */
+.ei-chat-top{display:flex;align-items:center;gap:10px;padding:10px 0 14px;border-bottom:1px solid var(--ei-line)}
+.ei-chat-top img{width:36px;height:36px;border-radius:50%;object-fit:cover}
+.ei-chat-top b{display:block;font-size:14px;font-weight:600}
+.ei-chat-top small{display:block;margin-top:2px;font-size:11px;color:var(--ei-ink-3)}
+.ei-chat{display:grid;gap:10px;padding:14px 0}
+.ei-chat li{display:grid;justify-items:start;max-width:86%}
+.ei-chat li[data-me]{justify-items:end;justify-self:end}
+.ei-chat p{padding:10px 13px;border-radius:16px 16px 16px 4px;background:var(--ei-card);font-size:14px;line-height:1.55}
+.ei-chat li[data-me] p{border-radius:16px 16px 4px 16px;background:var(--ei-purple);color:#fff}
+.ei-chat-attach{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:14px;background:#232326;text-align:left}
+.ei-chat-kind{flex:none;padding:4px 9px;border-radius:999px;background:var(--ei-lav-soft);color:#2a1540;font-size:10px;font-weight:600}
+.ei-chat-attach .ei-row-main b{font-size:13px}
+.ei-chat-bar{display:flex;align-items:center;gap:9px;padding:10px 0 4px;border-top:1px solid var(--ei-line)}
+.ei-chat-bar input{flex:1;min-width:0;padding:10px 14px;border-radius:999px;background:#2b2b30;font-size:14px}
+.ei-chat-bar input::placeholder{color:var(--ei-ink-3)}
+.ei-chat-bar .ei-icon-btn{background:#2b2b30;font-size:20px;color:var(--ei-ink-2)}
+.ei-chat-bar .ei-chip{border-color:var(--ei-purple);background:var(--ei-purple);color:#fff;font-weight:600}
+
+/* ------------------------------------------ N17 虚拟乐器演奏 */
+.ei-inst-head{display:flex;align-items:center;gap:12px;padding:12px 0 8px}
+.ei-inst-head div{flex:1;min-width:0}
+.ei-inst-head b{display:block;font-size:19px;font-weight:600}
+.ei-inst-head small{display:block;margin-top:4px;font-size:12px;color:var(--ei-ink-3)}
+.ei-inst-stage{padding:14px 10px;border-radius:var(--ei-r);background:var(--ei-card)}
+
+.ei-keys{display:flex;gap:2px;height:150px}
+.ei-key-slot{position:relative;flex:1;display:flex}
+.ei-key{display:flex;flex:1;align-items:flex-end;justify-content:center;padding-bottom:7px;border-radius:0 0 5px 5px;background:linear-gradient(#fff,#e4e4ea)}
+.ei-key small{font-size:8px;color:#8a8a93}
+.ei-key[data-held]{background:linear-gradient(#f3e6ff,#d8b1ff)}
+.ei-key-b{position:absolute;z-index:2;top:0;right:-7px;width:14px;height:92px;border-radius:0 0 4px 4px;background:linear-gradient(#303038,#101014)}
+.ei-key-b[data-held]{background:linear-gradient(#9a63d6,#5f2f93)}
+
+.ei-fret{display:grid;gap:3px}
+.ei-fret-nums{display:flex;gap:3px;padding-left:0}
+.ei-fret-nums span{flex:1;text-align:center;font-size:9px;color:var(--ei-ink-3)}
+.ei-fret-str{display:flex;gap:3px;height:22px}
+.ei-fret-str button{flex:1;border-radius:4px;background:#232327;box-shadow:inset 0 50% 0 -49% #6b6b6c}
+.ei-fret-str button[data-held]{background:var(--ei-lav)}
+.ei-pads{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.ei-pads button{height:62px;border-radius:12px;background:#232327;font-size:12px;color:var(--ei-ink-3)}
+.ei-pads button[data-held]{background:var(--ei-lav);color:#1a1020}
+
+.ei-halo{position:relative;display:grid;place-items:center;flex:none;width:52px;height:52px;color:var(--ei-coral)}
+.ei-halo i{position:absolute;inset:0;border-radius:50%;border:1.5px solid currentColor;opacity:.25}
+.ei-halo[data-live] i{animation:ei-breathe 1.8s ease-out infinite}
+.ei-halo[data-live] i:last-of-type{animation-delay:.9s}
+.ei-halo svg{width:26px;height:26px}
+
+/* ------------------------------- N18 乐理课程 / N19 术语查询 */
+.ei-lesson-head{padding:14px 0 10px}
+.ei-lesson-head b{display:block;font-size:19px;font-weight:600}
+.ei-lesson-head small{display:block;margin-top:4px;font-size:12px;color:var(--ei-ink-3)}
+.ei-staff-wrap{padding:10px 8px}
+.ei-staff{display:block;width:100%;height:auto}
+.ei-lesson-p{margin-bottom:10px;font-size:14px;line-height:1.85;color:var(--ei-ink-2)}
+
+.ei-metro-wrap{display:grid;justify-items:center;gap:12px;padding:16px 12px}
+.ei-metro{display:grid;justify-items:center;gap:10px}
+.ei-metro svg{width:120px;height:98px}
+.ei-metro-dots{display:flex;gap:7px}
+.ei-metro-dots i{width:7px;height:7px;border-radius:50%;background:#3d3d44}
+.ei-metro-dots i[data-on]{background:var(--ei-yellow);box-shadow:0 0 9px #ffd20088}
+.ei-metro-ops{display:flex;justify-content:center;gap:8px}
+
+.ei-term-head{display:flex;align-items:center;gap:10px;padding:14px 0 8px}
+.ei-term-head .ei-chip{padding:5px 11px;border-color:var(--ei-lav);color:var(--ei-lav);font-size:11px}
+.ei-term-head b{font-size:23px;font-weight:600}
+.ei-term-card{display:grid;justify-items:center;gap:14px;padding:16px 12px}
+.ei-chord{width:132px;height:auto}
+.ei-term-ops{display:flex;gap:9px;width:100%}
+.ei-term-ops .ei-btn{padding:11px}
+
+.ei-vinyl{display:grid;justify-items:center;gap:12px}
+.ei-vinyl svg{width:180px;height:180px}
+.ei-vinyl[data-spin] svg{animation:ei-spin 4.2s linear infinite}
+.ei-vinyl b{font-size:17px;font-weight:600}
+.ei-tile{display:grid;place-items:center;min-height:86px;border-radius:14px;color:#1a1020;font-size:13px;font-weight:600}
+
+/* -------------------------------- 18 张原稿复刻用到的件 */
+/* 行里要放两个可点区域（整行 + 播放键），所以行本身是 div，
+   主体是一个撑满的按钮——按钮套按钮不是合法 HTML。 */
+.ei-row-hit{display:flex;flex:1;align-items:center;gap:12px;min-width:0;text-align:left}
+.ei-row-more{flex:none;width:30px;height:30px;border-radius:50%;background:#ffffff14;font-size:15px;color:var(--ei-ink-2);line-height:1}
+/* 实心白圆底 + 紫色加号。加号用两根 2.5px 的条画，比 ＋ 字形居中稳、粗细可控。 */
+.ei-fab{position:absolute;z-index:40;right:18px;bottom:calc(var(--ei-tabbar) + 14px);display:grid;place-items:center;width:62px;height:62px;border-radius:50%;background:#fff;box-shadow:0 14px 34px #00000080,0 0 0 1px #ffffff2e}
+.ei-fab:active{transform:scale(.94)}
+.ei-fab i{position:relative;display:block;width:26px;height:26px}
+.ei-fab i::before,.ei-fab i::after{content:'';position:absolute;top:50%;left:50%;border-radius:2px;background:var(--ei-purple);transform:translate(-50%,-50%)}
+.ei-fab i::before{width:26px;height:3px}
+.ei-fab i::after{width:3px;height:26px}
+.ei-hero{width:100%;height:200px;margin:4px 0 2px;border-radius:var(--ei-r);object-fit:cover}
+.ei-center-text{text-align:center}
+
+/* 我的采样：左滑出来的操作条压在行上，不参与布局。 */
+.ei-row[data-swiped]{box-shadow:inset 0 0 0 1.5px var(--ei-lav)}
+.ei-swipe{position:absolute;top:0;right:0;bottom:0;z-index:2;display:flex;align-items:center;gap:6px;padding:0 10px;border-radius:0 var(--ei-r) var(--ei-r) 0;background:linear-gradient(90deg,#00000000,#191920 18%,#191920)}
+.ei-swipe button{display:inline-flex;align-items:center;min-height:32px;padding:8px 13px;border-radius:999px;background:#33333a;font-size:12px;line-height:1.2;color:var(--ei-ink-2)}
+.ei-swipe button:last-child{background:#4a2330;color:#ffb9c4}
+.ei-row{position:relative}
+
+/* AI实验室纵向 coverflow：吸附交给 scroll-snap，居中那张由 JS 标 data-at。 */
+.ei-flow{height:560px;overflow:hidden auto;display:grid;gap:14px;padding:6px 0 40px;scroll-snap-type:y mandatory;scrollbar-width:none}
+.ei-flow::-webkit-scrollbar{width:0}
+.ei-flow-card{position:relative;display:grid;border-radius:var(--ei-r);background:var(--ei-card);overflow:hidden;scroll-snap-align:center;text-align:left;opacity:.55;transform:scale(.94);transition:opacity .22s,transform .22s}
+.ei-flow-card[data-at]{opacity:1;transform:scale(1)}
+.ei-flow-card img{width:100%;height:232px;object-fit:cover}
+/* 名字压在图上：裁出来的四张原稿都是纯画面，没有标题，光看图认不出功能。
+   底部一层渐变遮罩保证白字在亮色照片上也读得清。 */
+.ei-flow-card span{position:absolute;right:0;bottom:0;left:0;display:grid;gap:3px;padding:44px 16px 15px;background:linear-gradient(#0000,#000000c9 52%,#000000e8);text-shadow:0 1px 8px #000000b3}
+.ei-flow-card b{font-size:19px;font-weight:700;color:#fff}
+.ei-flow-card i{font-size:10px;font-style:normal;letter-spacing:.14em;text-transform:uppercase;color:var(--ei-lav)}
+.ei-flow-card small{font-size:12px;line-height:1.6;color:#ffffffc4}
+
+/* 偶然音乐的 18 个彩色关键词 */
+.ei-words{display:flex;flex-wrap:wrap;gap:8px;padding:4px 0 2px}
+.ei-word{display:inline-flex;align-items:center;min-height:36px;padding:9px 15px;border:1px solid currentColor;border-radius:999px;font-size:14px;font-weight:600;line-height:1.2;transition:background .16s,color .16s,transform .12s}
+.ei-word:active{transform:scale(.95)}
+
+.ei-rec{display:grid;justify-items:center;gap:8px;padding:20px 16px;text-align:center}
+.ei-rec b{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}
+.ei-rec .ei-btn{margin-top:8px}
+
+.ei-albums{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ei-album{display:grid;gap:4px;text-align:left}
+.ei-album img{width:100%;height:210px;border-radius:var(--ei-r);object-fit:cover}
+.ei-album b{margin-top:4px;font-size:14px;font-weight:600;color:var(--ei-cream)}
+.ei-album small{font-size:11px;color:var(--ei-ink-3)}
+
+/* 社区瀑布流：卡片底部那条奶油作者带是原稿 14 的标志。 */
+.ei-feed-card{border-radius:var(--ei-r);background:var(--ei-card);overflow:hidden}
+.ei-feed-hit{display:grid;width:100%;text-align:left}
+.ei-feed-hit img{width:100%;height:auto;object-fit:cover}
+.ei-feed-hit b{padding:10px 11px 8px;font-size:13px;font-weight:600;line-height:1.5;color:var(--ei-cream)}
+.ei-feed-by{display:flex;align-items:center;gap:7px;padding:8px 11px;background:var(--ei-cream);color:#2a1540}
+.ei-feed-by img{flex:none;width:22px;height:22px;border-radius:50%;object-fit:cover}
+.ei-feed-by small{flex:1;min-width:0;font-size:11px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.ei-feed-by button{flex:none;font-size:11px;font-weight:600;color:#6b5a44}
+.ei-feed-by button[aria-pressed='true']{color:#d12b58}
+
+.ei-groups{display:grid;gap:12px}
+.ei-group-card{border-radius:var(--ei-r);background:var(--ei-card);overflow:hidden}
+.ei-group-hit{display:grid;width:100%;text-align:left}
+.ei-group-hit img{width:100%;height:160px;object-fit:cover}
+.ei-group-hit span{display:grid;gap:4px;padding:11px 13px 4px}
+.ei-group-hit b{font-size:17px;font-weight:600;color:var(--ei-cream)}
+.ei-group-hit small{font-size:12px;color:var(--ei-ink-3)}
+.ei-group-foot{display:flex;align-items:center;gap:10px;padding:8px 13px 13px}
+.ei-group-foot small{flex:1;font-size:11px;color:var(--ei-ink-3)}
+.ei-group-foot .ei-chip{border-color:var(--ei-lav);background:var(--ei-lav);color:#2a1540}
+
+.ei-inst-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ei-inst-card{display:grid;gap:3px;padding:8px;border-radius:var(--ei-r);background:var(--ei-card);text-align:left}
+.ei-inst-card img{width:100%;height:134px;border-radius:var(--ei-r-sm);object-fit:cover}
+.ei-inst-card b{margin-top:5px;font-size:14px;font-weight:600;color:var(--ei-cream)}
+.ei-inst-card small{font-size:10px;letter-spacing:.04em;color:var(--ei-ink-3)}
+.ei-inst-card .ei-tile{min-height:134px}
+
+.ei-search-fake{display:flex;align-items:center;width:100%;margin:2px 0 12px;padding:11px 16px;border-radius:999px;background:#2b2b30;font-size:14px;color:var(--ei-ink-3);text-align:left}
+
+/* ---------------------------------------------------------- 转场 */
+/* .ei-body 的 key 是 routeKey，换屏就重挂载，所以入场动画挂在它身上就够了，
+   不用维护一份「上一屏」的 DOM。方向由 reducer 写在 data-dir 上。 */
+.ei-screen[data-dir='fwd'] .ei-body{animation:ei-in-fwd .24s ease-out}
+.ei-screen[data-dir='back'] .ei-body{animation:ei-in-back .24s ease-out}
+.ei-screen[data-dir='lateral'] .ei-body{animation:ei-in-lateral .2s ease-out}
+.ei-scrim{animation:ei-fade .18s ease-out}
+.ei-sheet{animation:ei-sheet-up .26s cubic-bezier(.2,.8,.3,1)}
+.ei-drawer{animation:ei-drawer-in .24s cubic-bezier(.2,.8,.3,1)}
+.ei-center{animation:ei-pop .22s cubic-bezier(.2,.8,.3,1)}
+
+/* ------------------------------------------------------ keyframes */
+@keyframes ei-toast{from{opacity:0;transform:translate(-50%,10px)}to{opacity:1;transform:translate(-50%,0)}}
+@keyframes ei-spin{to{transform:rotate(360deg)}}
+@keyframes ei-breathe{from{opacity:.42;transform:scale(.72)}to{opacity:0;transform:scale(1.25)}}
+@keyframes ei-fade{from{opacity:0}to{opacity:1}}
+@keyframes ei-in-fwd{from{opacity:0;transform:translateX(26px)}to{opacity:1;transform:translateX(0)}}
+@keyframes ei-in-back{from{opacity:0;transform:translateX(-22px)}to{opacity:1;transform:translateX(0)}}
+@keyframes ei-in-lateral{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes ei-sheet-up{from{transform:translateY(100%)}to{transform:translateY(0)}}
+@keyframes ei-drawer-in{from{transform:translateX(-100%)}to{transform:translateX(0)}}
+@keyframes ei-pop{from{opacity:0;transform:translate(-50%,-50%) scale(.94)}to{opacity:1;transform:translate(-50%,-50%) scale(1)}}
+
+/* --------------------------------------------------------- media */
+@media (max-width:600px){
+  .ei-stage{padding:0}
+  .ei-stage .ei-frame{width:100vw;height:100dvh;border:0;border-radius:0;box-shadow:none;transform:none}
+  .ei-island,.ei-home{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  /* 动效关掉，但不静音——音频不是动效。 */
+  .ei-music *,.ei-music *::before,.ei-music *::after{animation:none!important;transition:none!important}
+}
+
+
+
+
+
+
+
+

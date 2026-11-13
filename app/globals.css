@@ -1,0 +1,18 @@
+/* 全站只有两个页面，机身样式全在 app/music.css 里，这里只定底色和锁页面滚动：
+   原型是一块固定 393×852 的机身，页面本身不该跟着滚。设计板用
+   app/board/board.css 第一行的 `body:has(.ei-board)` 逃生口把滚动放回来。 */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100%;
+  background: #0d0d10;
+}
+
+body {
+  overflow: hidden;
+}
